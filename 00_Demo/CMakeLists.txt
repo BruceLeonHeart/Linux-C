@@ -15,6 +15,8 @@ include_directories(
 
 # 创建可执行文件
 add_executable(demo ${SRC_FILES})
+add_executable(goto src/goto.c)
+add_executable(func_pointer src/func_pointer.c)
 
 # 设置输出目录
 # set_target_properties(demo PROPERTIES
