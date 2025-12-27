@@ -23,7 +23,8 @@ int main()
     struct sockaddr_in sock;
     sock.sin_family = AF_INET;
     sock.sin_port = htons(12345); // 字节顺序转换函数
-    sock.sin_addr.s_addr = inet_addr("127.0.0.1"); // Bind to any address
+    // inet_aton 与 inet_addr(无法处理255.255.255.255) 类似，但更安全，推荐使用 inet_aton
+    sock.sin_addr.s_addr = inet_aton("127.0.0.1"); // Bind to any address
     memset(sock.sin_zero, 0, sizeof(sock.sin_zero)); // 填充字节
 
 // ---- 3. 建立连接 ----
