@@ -25,10 +25,11 @@ message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 
 
 # 添加可执行文件
-add_subdirectory(00_Demo)
-add_subdirectory(01_File)
-add_subdirectory(03_Thread)
-add_subdirectory(05_Network)
+# add_subdirectory(00_Demo)
+# add_subdirectory(01_File)
+# add_subdirectory(03_Thread)
+# add_subdirectory(05_Network)
+add_subdirectory(tests)
 
 # 如果需要添加测试
 if(BUILD_TESTS)
