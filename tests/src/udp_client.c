@@ -25,30 +25,6 @@ Packet Index	2 字节	当前分包的序号（从 0 开始）
 Total Packets	2 字节	这一帧总共有多少个分包
 Data Offset	4 字节	该数据在全局 Buffer 中的偏移量（可选）
 
-#define CHUNK_SIZE 1400
-
-void send_large_data(int sock, struct sockaddr_in *addr, unsigned char *buffer, int total_len) {
-    int total_packets = (total_len + CHUNK_SIZE - 1) / CHUNK_SIZE;
-    uint32_t frame_id = get_next_frame_id(); // 帧序号自增
-
-    for (int i = 0; i < total_packets; i++) {
-        unsigned char packet[1500];
-        int offset = i * CHUNK_SIZE;
-        int current_chunk_size = (total_len - offset) < CHUNK_SIZE ? (total_len - offset) : CHUNK_SIZE;
-
-        // 1. 填充头部
-        memcpy(packet, &frame_id, 4);
-        memcpy(packet + 4, &i, 2);
-        memcpy(packet + 6, &total_packets, 2);
-        
-        // 2. 填充数据
-        memcpy(packet + 8, buffer + offset, current_chunk_size);
-
-        // 3. 发送
-        sendto(sock, packet, current_chunk_size + 8, 0, (struct sockaddr*)addr, sizeof(*addr));
-    }
-}
-
 4. 接收端逻辑（Receiver）
 接收端需要一个临时缓冲区来暂存属于同一帧的分包，直到所有分包到齐。
 解析头部：提取 frame_id, index, total。
@@ -89,9 +65,6 @@ int main() {
     ssize_t img_size = w * h * n;
     printf("Image size in bytes: %ld\n", img_size);
 
-    // 分包
-
-
 #if 1
     int sockfd;
     struct sockaddr_in server_addr;
@@ -118,23 +91,29 @@ int main() {
 
     printf("UDP Client connected to %s:%d\n", SERVER_IP, PORT);
     // printf("Type 'exit' to quit\n");
-
-    while (1) {
-        // printf("Enter message: ");
-        // fgets(buffer, BUFFER_SIZE, stdin);
+    unsigned char packet[1500];
+    int total_packets = (img_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+    printf("total_packets : %ld\n", total_packets);
+    struct MetaData meta;
+    meta.sequence_id = 1; // 假设只有一帧数据
+    meta.total_packets = total_packets;
+    for (int i = 0; i < total_packets; i++) {
+        memset(packet, 0, sizeof(packet));
+        int offset = i * CHUNK_SIZE;
+        int current_chunk_size = (img_size - offset) < CHUNK_SIZE ? (img_size - offset) : CHUNK_SIZE;
+        meta.packet_index = i;
+        meta.data_offset = i * CHUNK_SIZE;
+        // 1. 填充头部
+        memcpy(packet, &meta.sequence_id, 4);
+        memcpy(packet + 4, &meta.packet_index, 2);
+        memcpy(packet + 6, &meta.total_packets, 2);
         
-        // // 移除换行符
-        // buffer[strcspn(buffer, "\n")] = 0;
-        
-        // // 检查退出命令
-        // if (strcmp(buffer, "exit") == 0) {
-        //     break;
-        // }
+        // 2. 填充数据
+        memcpy(packet + 8, temp_data + offset, current_chunk_size);
 
-        // 发送数据
         bytes_sent = sendto(sockfd, 
-                            temp_data, 
-                            img_size,
+                            packet, 
+                            current_chunk_size + 8,
                             0,
                            (struct sockaddr*)&server_addr, sizeof(server_addr));
         
@@ -145,20 +124,6 @@ int main() {
 
         printf("Sent %ld bytes\n", bytes_sent);
 
-        // 等待响应（可选的）
-        #if 0
-        memset(buffer, 0, BUFFER_SIZE);
-        socklen_t server_len = sizeof(server_addr);
-        
-        bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
-                                 (struct sockaddr*)&server_addr, &server_len);
-        
-        if (bytes_received > 0) {
-            printf("Server response: %s\n", buffer);
-        } else {
-            printf("No response from server\n");
-        }
-        #endif
     }
 
     close(sockfd);
